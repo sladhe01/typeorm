@@ -860,7 +860,11 @@ export class ColumnMetadata {
      * Sets given entity's column value.
      * Using of this method helps to set entity relation's value of the lazy and non-lazy relations.
      */
-    setEntityValue(entity: ObjectLiteral, value: any): void {
+    setEntityValue(
+        entity: ObjectLiteral,
+        value: any,
+        aliasName?: string,
+    ): void {
         if (this.embeddedMetadata) {
             // first step - we extract all parent properties of the entity relative to this column, e.g. [data, information, counters]
             const extractEmbeddedColumnValue = (
@@ -882,7 +886,11 @@ export class ColumnMetadata {
                     )
                     return map
                 }
-                map[this.propertyName] = value
+                if (aliasName) {
+                    map[aliasName] = value
+                } else {
+                    map[this.propertyName] = value
+                }
                 return map
             }
             return extractEmbeddedColumnValue(
@@ -903,10 +911,19 @@ export class ColumnMetadata {
                     entity[this.propertyName] = {}
                 }
 
-                entity[this.propertyName][this.referencedColumn.propertyName] =
-                    value
+                if (aliasName) {
+                    entity[this.propertyName][aliasName] = value
+                } else {
+                    entity[this.propertyName][
+                        this.referencedColumn.propertyName
+                    ] = value
+                }
             } else {
-                entity[this.propertyName] = value
+                if (aliasName) {
+                    entity[aliasName] = value
+                } else {
+                    entity[this.propertyName] = value
+                }
             }
         }
     }

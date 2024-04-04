@@ -54,7 +54,6 @@ describe("github issues > #215 invalid replacements of join conditions", () => {
                         "p.abbreviation_id = ab.id",
                     )
                     .getMany()
-
                 loadedPosts.length.should.be.equal(1)
             }),
         ))

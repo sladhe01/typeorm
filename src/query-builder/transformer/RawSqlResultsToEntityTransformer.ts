@@ -79,15 +79,25 @@ export class RawSqlResultsToEntityTransformer {
                 ),
             )
         } else {
+            alias.metadata.primaryColumns.forEach((column) => {})
             keys.push(
-                ...alias.metadata.primaryColumns.map((column) =>
-                    DriverUtils.buildAlias(
-                        this.driver,
-                        undefined,
-                        alias.name,
-                        column.databaseName,
-                    ),
-                ),
+                ...alias.metadata.primaryColumns.map((column) => {
+                    const selectedColumn = this.expressionMap.selects.find(
+                        (select) =>
+                            select.selection ===
+                            alias.name + "." + column.databaseName,
+                    )
+                    if (selectedColumn && selectedColumn.aliasName) {
+                        return selectedColumn.aliasName
+                    } else {
+                        return DriverUtils.buildAlias(
+                            this.driver,
+                            undefined,
+                            alias.name,
+                            column.databaseName,
+                        )
+                    }
+                }),
             )
         }
         rawResults.forEach((rawResult) => {
@@ -220,7 +230,7 @@ export class RawSqlResultsToEntityTransformer {
             )
                 return
 
-            const value =
+            let value =
                 rawResults[0][
                     DriverUtils.buildAlias(
                         this.driver,
@@ -229,7 +239,17 @@ export class RawSqlResultsToEntityTransformer {
                         column.databaseName,
                     )
                 ]
-            if (value === undefined || column.isVirtual) return
+            const selectedColumn = this.expressionMap.selects.find(
+                (select) =>
+                    select.selection === alias.name + "." + column.propertyName,
+            )
+            if (
+                value === undefined &&
+                selectedColumn &&
+                selectedColumn.aliasName
+            ) {
+                value = rawResults[0][selectedColumn.aliasName]
+            } else if (value === undefined || column.isVirtual) return
 
             // if user does not selected the whole entity or he used partial selection and does not select this particular column
             // then we don't add this column and its value into the entity
@@ -242,11 +262,18 @@ export class RawSqlResultsToEntityTransformer {
                 )
             )
                 return
-
-            column.setEntityValue(
-                entity,
-                this.driver.prepareHydratedValue(value, column),
-            )
+            if (selectedColumn && selectedColumn.aliasName) {
+                column.setEntityValue(
+                    entity,
+                    this.driver.prepareHydratedValue(value, column),
+                    selectedColumn.aliasName,
+                )
+            } else {
+                column.setEntityValue(
+                    entity,
+                    this.driver.prepareHydratedValue(value, column),
+                )
+            }
             if (value !== null)
                 // we don't mark it as has data because if we will have all nulls in our object - we don't need such object
                 hasData = true
